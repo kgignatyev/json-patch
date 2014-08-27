@@ -29,23 +29,28 @@ import com.google.common.base.Objects;
  * Difference representation. Captures diff information required to
  * generate JSON patch operations and factorize differences.
  */
-final class Diff
-{
+final class Diff {
     DiffOperation operation;
     JsonPointer path;
     JsonPointer arrayPath;
     int firstArrayIndex;
     int secondArrayIndex;
     final JsonNode value;
+    final JsonNode oldValue;
     JsonPointer fromPath;
     Diff pairedDiff;
     boolean firstOfPair;
 
     static Diff simpleDiff(final DiffOperation operation,
-        final JsonPointer path, final JsonNode value)
-    {
+                           final JsonPointer path, final JsonNode value) {
         return new Diff(operation, path, value.deepCopy());
     }
+
+    static Diff simpleDiff(final DiffOperation operation,
+                           final JsonPointer path, final JsonNode value, final JsonNode oldValue) {
+        return new Diff(operation, path, value.deepCopy(), oldValue.deepCopy());
+    }
+
 
     /*
      * "Stateless" removal of a given node from an array given a base path (the
@@ -54,10 +59,10 @@ final class Diff
      * of a target array; in other words, the source node has extra elements.
      */
     static Diff tailArrayRemove(final JsonPointer basePath, final int index,
-        final int removeIndex, final JsonNode victim)
-    {
+                                final int removeIndex, final JsonNode victim) {
+        JsonNode oldValue = victim.deepCopy();
         return new Diff(DiffOperation.REMOVE, basePath, index, removeIndex,
-            victim.deepCopy());
+                oldValue,oldValue);
     }
 
     /*
@@ -69,51 +74,65 @@ final class Diff
      * to be understood and "decorrelated".
      */
     static Diff arrayRemove(final JsonPointer basePath,
-        final IndexedJsonArray array1, final IndexedJsonArray array2)
-    {
-        return new Diff(DiffOperation.REMOVE, basePath, array1.getIndex(),
-            array2.getIndex(), array1.getElement().deepCopy());
+                            final IndexedJsonArray array1, final IndexedJsonArray array2) {
+
+        JsonNode oldValue = array1.getElement().deepCopy();
+        Diff diff = new Diff(DiffOperation.REMOVE, basePath, array1.getIndex(),
+                array2.getIndex(), oldValue, oldValue);
+        return diff;
     }
 
-    static Diff arrayAdd(final JsonPointer basePath, final JsonNode node)
-    {
+    static Diff arrayAdd(final JsonPointer basePath, final JsonNode node) {
         return new Diff(DiffOperation.ADD, basePath, -1, -1, node.deepCopy());
     }
 
     static Diff arrayInsert(final JsonPointer basePath,
-        final IndexedJsonArray array1, final IndexedJsonArray array2)
-    {
+                            final IndexedJsonArray array1, final IndexedJsonArray array2) {
         return new Diff(DiffOperation.ADD, basePath, array1.getIndex(),
-            array2.getIndex(), array2.getElement().deepCopy());
+                array2.getIndex(), array2.getElement().deepCopy());
+    }
+
+
+    private Diff(final DiffOperation operation, final JsonPointer path,
+                 final JsonNode value) {
+        this(operation, path, value, null);
     }
 
     private Diff(final DiffOperation operation, final JsonPointer path,
-        final JsonNode value)
-    {
+                 final JsonNode value, final JsonNode oldValue) {
         this.operation = operation;
         this.path = path;
         this.value = value;
+        this.oldValue = oldValue;
     }
 
     private Diff(final DiffOperation operation, final JsonPointer arrayPath,
-        final int firstArrayIndex, final int secondArrayIndex,
-        final JsonNode value)
-    {
+                 final int firstArrayIndex, final int secondArrayIndex,
+                 final JsonNode value) {
+        this(operation, arrayPath, firstArrayIndex, secondArrayIndex, value, null);
+    }
+
+    private Diff(final DiffOperation operation, final JsonPointer arrayPath,
+                 final int firstArrayIndex, final int secondArrayIndex,
+                 final JsonNode value, final JsonNode oldValue) {
         this.operation = operation;
         this.arrayPath = arrayPath;
         this.firstArrayIndex = firstArrayIndex;
         this.secondArrayIndex = secondArrayIndex;
         this.value = value;
+        this.oldValue = oldValue;
     }
 
-    JsonNode asJsonPatch()
-    {
+    JsonNode asJsonPatch() {
         final JsonPointer ptr = arrayPath != null ? getSecondArrayPath()
-            : path;
+                : path;
         final ObjectNode patch = operation.newOp(ptr);
             /*
              * A remove only has a path
              */
+        if (oldValue != null) {
+            patch.put("oldValue", oldValue);
+        }
         if (operation == DiffOperation.REMOVE)
             return patch;
             /*
@@ -121,15 +140,15 @@ final class Diff
              * operations (add and replace) have a value instead.
              */
         if (operation == DiffOperation.MOVE
-            || operation == DiffOperation.COPY)
+                || operation == DiffOperation.COPY)
             patch.put("from", fromPath.toString());
         else
             patch.put("value", value);
+
         return patch;
     }
 
-    JsonPointer getSecondArrayPath()
-    {
+    JsonPointer getSecondArrayPath() {
         // compute path from array path and index
         if (secondArrayIndex != -1)
             return arrayPath.append(secondArrayIndex);
@@ -138,41 +157,38 @@ final class Diff
 
 
     @Override
-    public int hashCode()
-    {
+    public int hashCode() {
         return Objects.hashCode(operation, path, arrayPath, firstArrayIndex,
-            secondArrayIndex, JsonNumEquals.getInstance().wrap(value),
-            fromPath, pairedDiff != null, firstOfPair);
+                secondArrayIndex, JsonNumEquals.getInstance().wrap(value),
+                fromPath, pairedDiff != null, firstOfPair);
     }
 
     @Override
-    public boolean equals(final Object obj)
-    {
+    public boolean equals(final Object obj) {
         if (obj == null)
             return false;
         if (getClass() != obj.getClass())
             return false;
         final Diff other = (Diff) obj;
         return operation == other.operation
-            && Objects.equal(path, other.path)
-            && Objects.equal(arrayPath, other.arrayPath)
-            && firstArrayIndex == other.firstArrayIndex
-            && secondArrayIndex == other.secondArrayIndex
-            && JsonNumEquals.getInstance().equivalent(value, other.value)
-            && Objects.equal(fromPath, other.fromPath)
-            && Objects.equal(pairedDiff != null, other.pairedDiff != null)
-            && firstOfPair == other.firstOfPair;
+                && Objects.equal(path, other.path)
+                && Objects.equal(arrayPath, other.arrayPath)
+                && firstArrayIndex == other.firstArrayIndex
+                && secondArrayIndex == other.secondArrayIndex
+                && JsonNumEquals.getInstance().equivalent(value, other.value)
+                && Objects.equal(fromPath, other.fromPath)
+                && Objects.equal(pairedDiff != null, other.pairedDiff != null)
+                && firstOfPair == other.firstOfPair;
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return Objects.toStringHelper(this).add("op", operation)
-            .add("path", path).add("arrayPath", arrayPath)
-            .add("firstArrayIndex", firstArrayIndex)
-            .add("secondArrayIndex", secondArrayIndex)
-            .add("value", value).add("fromPath", fromPath)
-            .add("paired", pairedDiff != null).add("firstOfPair", firstOfPair)
-            .toString();
+                .add("path", path).add("arrayPath", arrayPath)
+                .add("firstArrayIndex", firstArrayIndex)
+                .add("secondArrayIndex", secondArrayIndex)
+                .add("value", value).add("fromPath", fromPath)
+                .add("paired", pairedDiff != null).add("firstOfPair", firstOfPair)
+                .toString();
     }
 }

@@ -65,7 +65,7 @@ public final class JsonDiffTest
         final JsonNode second, final JsonNode expected)
         throws IOException, JsonPatchException
     {
-        final JsonNode actual = JsonDiff.asJson(first, second);
+        final JsonNode actual = new JsonDiff().asJson(first, second);
         assertEquals(actual, expected,
             "generated patch differs from expectations");
 

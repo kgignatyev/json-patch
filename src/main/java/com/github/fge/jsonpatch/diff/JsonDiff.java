@@ -32,7 +32,7 @@ import com.google.common.collect.Lists;
 
 import java.util.List;
 
-import static com.github.fge.jsonpatch.diff.DiffOperation.*;
+import static   com.github.fge.jsonpatch.diff.DiffOperation.*;
 
 /**
  * "Reverse" factorizing JSON Patch implementation
@@ -65,13 +65,13 @@ import static com.github.fge.jsonpatch.diff.DiffOperation.*;
  * @since 1.2
  * @author Randy Watler
  */
-public final class JsonDiff
+public  class JsonDiff
 {
-    private static final JsonNodeFactory FACTORY = JacksonUtils.nodeFactory();
-    private static final Equivalence<JsonNode> EQUIVALENCE
+      final JsonNodeFactory FACTORY = JacksonUtils.nodeFactory();
+      final Equivalence<JsonNode> EQUIVALENCE
         = JsonNumEquals.getInstance();
 
-    private JsonDiff()
+    public JsonDiff()
     {
     }
 
@@ -83,7 +83,7 @@ public final class JsonDiff
      * @param target the expected result after applying the patch
      * @return the patch as a {@link JsonNode}
      */
-    public static JsonNode asJson(final JsonNode source, final JsonNode target)
+    public  JsonNode asJson(final JsonNode source, final JsonNode target)
     {
         // recursively compute node diffs
         final List<Diff> diffs = Lists.newArrayList();
@@ -107,7 +107,7 @@ public final class JsonDiff
      * @param source source node
      * @param target target node
      */
-    private static void generateDiffs(final List<Diff> diffs,
+      void generateDiffs(final List<Diff> diffs,
         final JsonPointer path, final JsonNode source, final JsonNode target)
     {
         /*
@@ -153,7 +153,7 @@ public final class JsonDiff
      * @param source node to patch
      * @param target node to attain
      */
-    private static void generateObjectDiffs(final List<Diff> diffs,
+      void generateObjectDiffs(final List<Diff> diffs,
         final JsonPointer path, final JsonNode source, final JsonNode target)
     {
         // compare different objects fieldwise in predictable order;
@@ -195,7 +195,7 @@ public final class JsonDiff
      *
      * @see LCS#getLCS(JsonNode, JsonNode)
      */
-    private static void generateArrayDiffs(final List<Diff> diffs,
+      void generateArrayDiffs(final List<Diff> diffs,
         final JsonPointer path, final JsonNode source, final JsonNode target)
     {
         // compare array elements linearly using longest common subsequence
@@ -218,7 +218,7 @@ public final class JsonDiff
      * until elements extracted from both arrays are equivalent to the first
      * element of the LCS.
      */
-    private static void preLCS(final List<Diff> diffs, final JsonPointer path,
+    private  void preLCS(final List<Diff> diffs, final JsonPointer path,
         final IndexedJsonArray lcs, final IndexedJsonArray source,
         final IndexedJsonArray target)
     {
@@ -305,7 +305,7 @@ public final class JsonDiff
      * we can be sure that there is at least one element left in both the source
      * and target array.
      */
-    private static void inLCS(final List<Diff> diffs, final JsonPointer path,
+    private  void inLCS(final List<Diff> diffs, final JsonPointer path,
         final IndexedJsonArray lcs, final IndexedJsonArray source,
         final IndexedJsonArray target)
     {
@@ -384,7 +384,7 @@ public final class JsonDiff
      * functions for _both_ possibilities since only one will ever produce any
      * results.
      */
-    private static void postLCS(final List<Diff> diffs, final JsonPointer path,
+    private  void postLCS(final List<Diff> diffs, final JsonPointer path,
         final IndexedJsonArray source, final IndexedJsonArray target)
     {
         JsonNode src, dst;
@@ -400,7 +400,7 @@ public final class JsonDiff
         removeRemaining(diffs, path, source, target.size());
     }
 
-    private static void addRemaining(final List<Diff> diffs,
+    private  void addRemaining(final List<Diff> diffs,
         final JsonPointer path, final IndexedJsonArray array)
     {
         Diff diff;
@@ -414,7 +414,7 @@ public final class JsonDiff
         }
     }
 
-    private static void removeRemaining(final List<Diff> diffs,
+    private  void removeRemaining(final List<Diff> diffs,
         final JsonPointer path, final IndexedJsonArray array,
         final int removeIndex)
     {
