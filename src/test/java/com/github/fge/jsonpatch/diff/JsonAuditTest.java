@@ -28,12 +28,18 @@ public class JsonAuditTest {
 
 
     @Test
-       public void testAuditRecordsForArrayRemovals() throws JsonProcessingException {
-           ObjectMapper om = new ObjectMapper();
-           JsonNode res = new JsonAudit().asJson(om.valueToTree(new Person[]{new Person("John")}), om.valueToTree(new Person[]{}));
-           System.out.println("removal of array element = " + om.writeValueAsString(res));
-       }
+    public void testAuditRecordsForArrayRemovals() throws JsonProcessingException {
+        ObjectMapper om = new ObjectMapper();
+        JsonNode res = new JsonAudit().asJson(om.valueToTree(new Person[]{new Person("John")}), om.valueToTree(new Person[]{}));
+        System.out.println("removal of array element = " + om.writeValueAsString(res));
+    }
 
+    @Test
+    public void testAuditRecordsForCreation() throws JsonProcessingException {
+        ObjectMapper om = new ObjectMapper();
+        JsonNode res = new JsonAudit().asJson(null, om.valueToTree(new Person("John Dow")));
+        System.out.println("compare with null = " + om.writeValueAsString(res));
+    }
 
     static class Person {
         String name;

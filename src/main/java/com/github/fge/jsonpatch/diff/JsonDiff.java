@@ -32,47 +32,45 @@ import com.google.common.collect.Lists;
 
 import java.util.List;
 
-import static   com.github.fge.jsonpatch.diff.DiffOperation.*;
+import static com.github.fge.jsonpatch.diff.DiffOperation.*;
 
 /**
  * "Reverse" factorizing JSON Patch implementation
- *
+ * <p/>
  * <p>This class only has one method, {@link #asJson(JsonNode, JsonNode)}, which
  * takes two JSON values as arguments and returns a patch as a {@link JsonNode}.
  * This generated patch can then be used in {@link
  * JsonPatch#fromJson(JsonNode)}.</p>
- *
+ * <p/>
  * <p>Numeric equivalence is respected. Operations are always generated in the
  * following order:</p>
- *
+ * <p/>
  * <ul>
- *     <li>additions,</li>
- *     <li>removals,</li>
- *     <li>replacements.</li>
+ * <li>additions,</li>
+ * <li>removals,</li>
+ * <li>replacements.</li>
  * </ul>
- *
+ * <p/>
  * <p>Array values generate operations in the order of elements. Factorizing is
  * done to merge add and remove into move operations and convert duplicate add
  * to copy operations if values are equivalent. No test operations are
  * generated (they don't really make sense for diffs anyway).</p>
- *
+ * <p/>
  * <p>Note that due to the way {@link JsonNode} is implemented, this class is
  * inherently <b>not</b> thread safe (since {@code JsonNode} is mutable). It is
  * therefore the responsibility of the caller to ensure that the calling context
  * is safe (by ensuring, for instance, that only the diff operation has
  * references to the values to be diff'ed).</p>
  *
- * @since 1.2
  * @author Randy Watler
+ * @since 1.2
  */
-public  class JsonDiff
-{
-      final JsonNodeFactory FACTORY = JacksonUtils.nodeFactory();
-      final Equivalence<JsonNode> EQUIVALENCE
-        = JsonNumEquals.getInstance();
+public class JsonDiff {
+    final JsonNodeFactory FACTORY = JacksonUtils.nodeFactory();
+    final Equivalence<JsonNode> EQUIVALENCE
+            = JsonNumEquals.getInstance();
 
-    public JsonDiff()
-    {
+    public JsonDiff() {
     }
 
     /**
@@ -83,42 +81,53 @@ public  class JsonDiff
      * @param target the expected result after applying the patch
      * @return the patch as a {@link JsonNode}
      */
-    public  JsonNode asJson(final JsonNode source, final JsonNode target){
-        return asJson(source,target,false);
+    public JsonNode asJson(final JsonNode source, final JsonNode target) {
+        return asJson(source, target, false);
     }
 
-    public  JsonNode asJson(final JsonNode source, final JsonNode target, boolean includeOldValues)
-    {
-        // recursively compute node diffs
+    public List<Diff> listDiffs(JsonNode source, JsonNode target, boolean includeOldValues) {
+        if (source == null) {
+            source = FACTORY.objectNode();
+        }
+        if (target == null) {
+            target = FACTORY.objectNode();
+        }
         final List<Diff> diffs = Lists.newArrayList();
         generateDiffs(diffs, JsonPointer.empty(), source, target);
         //lets remove oldValue to make diffs RFC compatible
-        if(!includeOldValues) {
+        if (!includeOldValues) {
             for (Diff diff : diffs) {
                 diff.oldValue = null;
             }
         }
         // factorize diffs to optimize patch operations
         DiffFactorizer.factorizeDiffs(diffs);
+        return diffs;
+    }
 
-        // generate patch operations from node diffs
+    public ArrayNode diffsToNode(List<Diff> diffs) {
         final ArrayNode patch = FACTORY.arrayNode();
-        for (final Diff diff: diffs)
+        for (final Diff diff : diffs)
             patch.add(diff.asJsonPatch());
         return patch;
+    }
+
+    public JsonNode asJson(final JsonNode source, final JsonNode target, boolean includeOldValues) {
+        // recursively compute node diffs
+        final List<Diff> diffs = listDiffs(source, target, includeOldValues);
+        return diffsToNode(diffs);
     }
 
     /**
      * Generate differences between source and target node.
      *
-     * @param diffs list of differences (in order)
-     * @param path parent path for both nodes
+     * @param diffs  list of differences (in order)
+     * @param path   parent path for both nodes
      * @param source source node
      * @param target target node
      */
-      void generateDiffs(final List<Diff> diffs,
-        final JsonPointer path, final JsonNode source, final JsonNode target)
-    {
+    void generateDiffs(final List<Diff> diffs,
+                       final JsonPointer path, final JsonNode source, final JsonNode target) {
         /*
          * If both nodes are equivalent, there is nothing to do
          */
@@ -153,18 +162,17 @@ public  class JsonDiff
 
     /**
      * Generate differences between two object nodes
-     *
+     * <p/>
      * <p>Differences are generated in the following order: added members,
      * removed members, modified members.</p>
      *
-     * @param diffs list of differences (modified)
-     * @param path parent path common to both nodes
+     * @param diffs  list of differences (modified)
+     * @param path   parent path common to both nodes
      * @param source node to patch
      * @param target node to attain
      */
-      void generateObjectDiffs(final List<Diff> diffs,
-        final JsonPointer path, final JsonNode source, final JsonNode target)
-    {
+    void generateObjectDiffs(final List<Diff> diffs,
+                             final JsonPointer path, final JsonNode source, final JsonNode target) {
         // compare different objects fieldwise in predictable order;
         // maintaining order is cosmetic, but facilitates test construction
         final List<String> inFirst = Lists.newArrayList(source.fieldNames());
@@ -175,38 +183,36 @@ public  class JsonDiff
         // added fields
         fields = Lists.newArrayList(inSecond);
         fields.removeAll(inFirst);
-        for (final String s: fields)
+        for (final String s : fields)
             diffs.add(Diff.simpleDiff(ADD, path.append(s), target.get(s)));
 
         // removed fields
         fields = Lists.newArrayList(inFirst);
         fields.removeAll(inSecond);
-        for (final String s: fields)
+        for (final String s : fields)
             diffs.add(Diff.simpleDiff(REMOVE, path.append(s), source.get(s)));
 
         // recursively generate diffs for fields in both objects
         fields = Lists.newArrayList(inFirst);
         fields.retainAll(inSecond);
-        for (final String s: fields)
+        for (final String s : fields)
             generateDiffs(diffs, path.append(s), source.get(s), target.get(s));
     }
 
     /**
      * Generate differences between two array nodes.
-     *
+     * <p/>
      * <p>Differences are generated in order by comparing elements against the
      * longest common subsequence of elements in both arrays.</p>
      *
-     * @param diffs list of differences (modified)
-     * @param path parent pointer of both array nodes
+     * @param diffs  list of differences (modified)
+     * @param path   parent pointer of both array nodes
      * @param source array node to be patched
      * @param target target node after patching
-     *
      * @see LCS#getLCS(JsonNode, JsonNode)
      */
-      void generateArrayDiffs(final List<Diff> diffs,
-        final JsonPointer path, final JsonNode source, final JsonNode target)
-    {
+    void generateArrayDiffs(final List<Diff> diffs,
+                            final JsonPointer path, final JsonNode source, final JsonNode target) {
         // compare array elements linearly using longest common subsequence
         // algorithm applied to the array elements
         final IndexedJsonArray src = new IndexedJsonArray(source);
@@ -227,10 +233,9 @@ public  class JsonDiff
      * until elements extracted from both arrays are equivalent to the first
      * element of the LCS.
      */
-    private  void preLCS(final List<Diff> diffs, final JsonPointer path,
-        final IndexedJsonArray lcs, final IndexedJsonArray source,
-        final IndexedJsonArray target)
-    {
+    private void preLCS(final List<Diff> diffs, final JsonPointer path,
+                        final IndexedJsonArray lcs, final IndexedJsonArray source,
+                        final IndexedJsonArray target) {
         if (lcs.isEmpty())
             return;
         /*
@@ -283,7 +288,7 @@ public  class JsonDiff
              */
             if (nrEquivalences == 0) {
                 generateDiffs(diffs, path.append(source.getIndex()), srcNode,
-                    dstNode);
+                        dstNode);
                 source.shift();
                 target.shift();
                 continue;
@@ -314,10 +319,9 @@ public  class JsonDiff
      * we can be sure that there is at least one element left in both the source
      * and target array.
      */
-    private  void inLCS(final List<Diff> diffs, final JsonPointer path,
-        final IndexedJsonArray lcs, final IndexedJsonArray source,
-        final IndexedJsonArray target)
-    {
+    private void inLCS(final List<Diff> diffs, final JsonPointer path,
+                       final IndexedJsonArray lcs, final IndexedJsonArray source,
+                       final IndexedJsonArray target) {
         JsonNode sourceNode;
         JsonNode targetNode;
         JsonNode lcsNode;
@@ -393,9 +397,8 @@ public  class JsonDiff
      * functions for _both_ possibilities since only one will ever produce any
      * results.
      */
-    private  void postLCS(final List<Diff> diffs, final JsonPointer path,
-        final IndexedJsonArray source, final IndexedJsonArray target)
-    {
+    private void postLCS(final List<Diff> diffs, final JsonPointer path,
+                         final IndexedJsonArray source, final IndexedJsonArray target) {
         JsonNode src, dst;
 
         while (!(source.isEmpty() || target.isEmpty())) {
@@ -409,9 +412,8 @@ public  class JsonDiff
         removeRemaining(diffs, path, source, target.size());
     }
 
-    private  void addRemaining(final List<Diff> diffs,
-        final JsonPointer path, final IndexedJsonArray array)
-    {
+    private void addRemaining(final List<Diff> diffs,
+                              final JsonPointer path, final IndexedJsonArray array) {
         Diff diff;
         JsonNode node;
 
@@ -423,17 +425,16 @@ public  class JsonDiff
         }
     }
 
-    private  void removeRemaining(final List<Diff> diffs,
-        final JsonPointer path, final IndexedJsonArray array,
-        final int removeIndex)
-    {
+    private void removeRemaining(final List<Diff> diffs,
+                                 final JsonPointer path, final IndexedJsonArray array,
+                                 final int removeIndex) {
         Diff diff;
         JsonNode node;
 
         while (!array.isEmpty()) {
             node = array.getElement();
             diff = Diff.tailArrayRemove(path, array.getIndex(),
-                                        removeIndex, node);
+                    removeIndex, node);
             diffs.add(diff);
             array.shift();
         }

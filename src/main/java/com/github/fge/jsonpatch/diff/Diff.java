@@ -29,7 +29,7 @@ import com.google.common.base.Objects;
  * Difference representation. Captures diff information required to
  * generate JSON patch operations and factorize differences.
  */
-final class Diff {
+public final class Diff {
     DiffOperation operation;
     JsonPointer path;
     JsonPointer arrayPath;
