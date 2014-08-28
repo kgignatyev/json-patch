@@ -10,6 +10,8 @@ This is an implementation of [RFC 6902 (JSON Patch)](http://tools.ietf.org/html/
 Merge Patch](http://tools.ietf.org/html/draft-ietf-appsawg-json-merge-patch-02) written in Java,
 which uses [Jackson](https://github.com/FasterXML/jackson-databind) (2.2.x) at its core.
 
+this fork included JsonAudit implementation
+
 Its features are:
 
 * {de,}serialization of JSON Patch and JSON merge patch instances with Jackson;
@@ -17,6 +19,8 @@ Its features are:
 * JSON "diff" (RFC 6902 only) with operation factorization.
 
 The JSON diff implementation is courtesy of [Randy Watler](https://github.com/rwatler).
+
+JsonAudit class allows writing audit log that includes 'old values' for removed and updated elements
 
 ## Versions
 
@@ -28,7 +32,7 @@ With Gradle:
 
 ```groovy
 dependencies {
-    compile(group: "com.github.fge", name: "json-patch", version: "yourVersionHere");
+    compile(group: "com.kgionline", name: "json-patch", version: "yourVersionHere");
 }
 ```
 
@@ -36,7 +40,7 @@ With Maven:
 
 ```xml
 <dependency>
-    <groupId>com.github.fge</groupId>
+    <groupId>com.kgionline</groupId>
     <artifactId>json-patch</artifactId>
     <version>yourVersionHere</version>
 </dependency>

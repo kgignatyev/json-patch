@@ -83,12 +83,21 @@ public  class JsonDiff
      * @param target the expected result after applying the patch
      * @return the patch as a {@link JsonNode}
      */
-    public  JsonNode asJson(final JsonNode source, final JsonNode target)
+    public  JsonNode asJson(final JsonNode source, final JsonNode target){
+        return asJson(source,target,false);
+    }
+
+    public  JsonNode asJson(final JsonNode source, final JsonNode target, boolean includeOldValues)
     {
         // recursively compute node diffs
         final List<Diff> diffs = Lists.newArrayList();
         generateDiffs(diffs, JsonPointer.empty(), source, target);
-
+        //lets remove oldValue to make diffs RFC compatible
+        if(!includeOldValues) {
+            for (Diff diff : diffs) {
+                diff.oldValue = null;
+            }
+        }
         // factorize diffs to optimize patch operations
         DiffFactorizer.factorizeDiffs(diffs);
 

@@ -36,7 +36,7 @@ final class Diff {
     int firstArrayIndex;
     int secondArrayIndex;
     final JsonNode value;
-    final JsonNode oldValue;
+    JsonNode oldValue;
     JsonPointer fromPath;
     Diff pairedDiff;
     boolean firstOfPair;
