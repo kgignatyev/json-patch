@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.kgionline</groupId>
   <artifactId>json-patch</artifactId>
-  <version>1.8-SNAPSHOT</version>
+  <version>1.8.1</version>
   <dependencies>
     <dependency>
       <groupId>com.google.code.findbugs</groupId>
